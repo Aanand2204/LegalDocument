@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LegalGuard AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><text y=%2220%22 font-size=%2220%22>&#9878;</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <a class="brand" href="#/home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">LegalGuard<em>AI</em></span>
+      </a>
+
+      <nav class="nav">
+        <a class="nav-link" href="#/" data-route="/">
+          <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-link" href="#/contracts" data-route="/contracts">
+          <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 4h8v1.5H8V16zm0-8h4v1.5H8V8z"/></svg>
+          <span>Contracts</span>
+        </a>
+        <a class="nav-link" href="#/deadlines" data-route="/deadlines">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.75 5v5.4l4.2 2.5-.75 1.25L11 13V7h1.75z"/></svg>
+          <span>Deadlines</span>
+        </a>
+      </nav>
+
+      <div class="rail-footer">
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">–</div>
+          <div class="user-meta">
+            <div class="user-email" id="user-email">—</div>
+          </div>
+          <button class="icon-btn" id="logout-btn" title="Log out" type="button">
+            <svg viewBox="0 0 24 24"><path d="M10 17v-2H4V9h6V7l5 5-5 5zM14 2a2 2 0 0 1 2 2v3h-2V4H6v16h8v-3h2v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8z"/></svg>
+          </button>
+        </div>
+        <div class="conn" id="conn-indicator">
+          <span class="dot"></span>
+          <span class="conn-label">API online</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="view" class="view" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <div id="toast-stack" class="toast-stack" aria-live="assertive"></div>
+  <div id="modal-root"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

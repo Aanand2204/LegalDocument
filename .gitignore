@@ -1,0 +1,33 @@
+# Environments
+legalenv/
+.venv/
+__pycache__/
+*.pyc
+
+# Local config / secrets
+.env
+
+# Local database
+*.db
+*.sqlite3
+
+# Uploaded contracts (local dev storage)
+documents/*
+!documents/.gitkeep
+
+# Application logs (see app/logging_config.py)
+logs/
+
+# Eval tooling
+.deepeval/
+
+# Claude Code local overrides
+.claude/settings.local.json
+
+# Test / tool caches
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+.claude/
