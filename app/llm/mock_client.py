@@ -1,20 +1,6 @@
-"""Deterministic mock chat client.
-
-No API key, no network call, no real language understanding — this exists
-so the whole agent pipeline (intake -> clause -> risk -> deadline ->
-compliance) runs and is testable with zero cost. It implements exactly
-the extension point `agent_framework.BaseChatClient` documents
-(`_inner_get_response`), so from every agent's point of view this is an
-ordinary chat client; swapping in a real provider later means adding a
-branch in `llm/client.py`, not touching agent code.
-
-Dispatch works by looking for a marker phrase in the agent's own system
-instructions (each agent module sets `instructions=...` containing e.g.
-"Clause Extraction Agent" — see agents/*.py) combined with structured
-markers each agent embeds in its prompt (e.g. "CLAUSES_FOUND: ..."). Each
-`_mock_*` function below returns the exact JSON shape the matching real
-agent module expects to parse.
-"""
+"""Deterministic mock chat client — implements BaseChatClient with regex/
+keyword heuristics instead of a real model, dispatched by a marker phrase
+in each agent's instructions."""
 from __future__ import annotations
 
 import json
@@ -29,20 +15,14 @@ _MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
 )
 _DATE_RE = re.compile(
-    # "1st day of January, 2026" / "1st January 2026" — the "day of" is
-    # the common formal-legal phrasing ("...entered into as of the Nth
-    # day of Month, YYYY"), left optional so the plainer form still matches.
     rf"\b(\d{{1,2}}(?:st|nd|rd|th)?\s+(?:day\s+of\s+)?(?:{_MONTHS}),?\s+\d{{4}}"
     rf"|(?:{_MONTHS})\s+\d{{1,2}}(?:st|nd|rd|th)?,?\s+\d{{4}}"
     rf"|\d{{1,2}}[/-]\d{{1,2}}[/-]\d{{2,4}}"
     rf"|\d{{4}}-\d{{2}}-\d{{2}})\b",
     re.IGNORECASE,
 )
-# "90 days", "ninety (90) days" — the closing paren between a spelled-out
-# number and its numeral is common in legal drafting.
 _NOTICE_DAYS_RE = re.compile(r"(\d+)\s*\)?\s*-?\s*days?", re.IGNORECASE)
 
-# clause_type -> keyword(s) that signal its presence in contract text.
 CLAUSE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Payment Terms": ("payment terms", "payment schedule"),
     "Termination": ("termination",),
@@ -75,9 +55,6 @@ CONTRACT_TYPE_KEYWORDS: dict[str, tuple[str, ...]] = {
 def _find_dates(text: str) -> list[date]:
     found: list[date] = []
     for match in _DATE_RE.finditer(text):
-        # "day of" is only in the regex to *match* formal phrasing ("the
-        # 1st day of January, 2026") — dateutil's strict (fuzzy=False)
-        # parser doesn't know those words, so strip them before parsing.
         candidate = re.sub(r"\s+day\s+of\s+", " ", match.group(1), flags=re.IGNORECASE)
         try:
             parsed = date_parser.parse(candidate, fuzzy=False).date()
@@ -89,13 +66,6 @@ def _find_dates(text: str) -> list[date]:
 
 
 def _normalize_whitespace(text: str) -> str:
-    """Collapse every run of whitespace (including newlines) to a single
-    space. PDF text extraction (pypdf) emits one `\\n` per *rendered
-    line*, not per sentence, so a real contract routinely wraps
-    "...effective as of\\nJanuary 1, 2026..." across two lines — treating
-    `\\n` as a sentence boundary (as a naive split would) then separates
-    a keyword from the date right next to it. Sentences are still
-    delimited by `.` after this, which line-wrapping never removes."""
     return re.sub(r"\s+", " ", text)
 
 
@@ -131,9 +101,6 @@ def _mock_intake(text: str) -> dict:
             contract_type = label
             break
 
-    # Normalized so a PDF line-wrap between the party names (or before the
-    # trailing punctuation) doesn't break the match — same reasoning as
-    # _sentence_containing.
     parties: list[str] = []
     between_match = re.search(
         r"between\s+(.+?)\s+and\s+(.+?)[.,]", _normalize_whitespace(text), re.IGNORECASE
@@ -153,21 +120,11 @@ def _mock_intake(text: str) -> dict:
     }
 
 
-# A numbered section heading — "12. Insurance and Indemnification. ..." —
-# is a strong, common signal for where one clause ends and the next
-# begins in real contracts (unlike a fixed character window, which lands
-# mid-word as often as not).
 _HEADING_RE = re.compile(r"\b(\d{1,3})\.\s+(?=[A-Z])")
-_MAX_CLAUSE_LENGTH = 3000  # guards against a runaway match on unnumbered text
+_MAX_CLAUSE_LENGTH = 3000
 
 
 def _paragraph_containing(text: str, index: int) -> str:
-    """The complete clause/paragraph around character `index` of
-    (whitespace-normalized) `text` — evidence a lawyer can actually read,
-    not a fixed-width snippet that starts and ends mid-word. Prefers
-    numbered-heading boundaries; falls back to the enclosing sentence for
-    text that isn't numbered, capped so neither can swallow half the
-    document."""
     headings = [m.start() for m in _HEADING_RE.finditer(text)]
     earlier = [h for h in headings if h <= index]
     later = [h for h in headings if h > index]
@@ -202,9 +159,6 @@ def _mock_clause(text: str) -> dict:
     return {"clauses": clauses}
 
 
-# Phrases that push a clause into a specific risk severity. Checked in
-# order; the first match wins. This is a deliberately small, explainable
-# rule set — a real model would reason about the clause instead.
 _RISK_SIGNALS: tuple[tuple[str, str, str, str], ...] = (
     (
         "unlimited liability",
@@ -268,11 +222,6 @@ def _mock_risk(text: str) -> dict:
     return {"risks": risks}
 
 
-# Keyword variants tried in order for each deadline type — real contracts
-# phrase these many ways; the first one that has a date in its sentence
-# wins. Broader/riskier phrases (e.g. bare "terminat") are deliberately
-# left out in favor of specific compounds ("termination date") to keep
-# false positives low.
 _EFFECTIVE_KEYWORDS = ("effective date", "effective", "commencement date", "commence")
 _EXPIRY_KEYWORDS = (
     "expiration date",
@@ -297,21 +246,16 @@ def _first_date_near_any_keyword(text: str, keywords: tuple[str, ...]) -> date |
 
 
 def _duration_from_effective(text: str, effective: date) -> date | None:
-    """Contracts often state a term length instead of an explicit expiry
-    date ("...for a period of three (3) years from the Effective Date").
-    Only used as a fallback when no explicit expiry date was found."""
     match = _DURATION_RE.search(_normalize_whitespace(text))
     if not match:
         return None
     amount, unit = int(match.group(1)), match.group(2).lower()
     if unit == "year":
         return effective.replace(year=effective.year + amount)
-    # Month arithmetic without a dependency: normalize month overflow by
-    # hand rather than pulling in dateutil.relativedelta for one call site.
     month_index = effective.month - 1 + amount
     year = effective.year + month_index // 12
     month = month_index % 12 + 1
-    day = min(effective.day, 28)  # side-steps day-31-in-February-style overflow
+    day = min(effective.day, 28)
     return effective.replace(year=year, month=month, day=day)
 
 
@@ -352,10 +296,6 @@ def _mock_deadline(text: str) -> dict:
 
 
 def _mock_compliance(text: str) -> dict:
-    # compliance_agent.py always emits both literal prefixes (even with
-    # empty lists — `', '.join([])` is just ""), so both matches are
-    # guaranteed; the `.strip()` filters keep an empty list from turning
-    # into {""} / [""].
     found_text = re.search(r"CLAUSES_FOUND:\s*(.*)", text).group(1)
     found = {c.strip().lower() for c in found_text.split(",") if c.strip()}
 
@@ -379,20 +319,13 @@ _DISPATCH: tuple[tuple[str, callable], ...] = (
 
 
 class MockChatClient(BaseChatClient):
-    """Zero-cost, offline stand-in for a real LLM chat client."""
-
     OTEL_PROVIDER_NAME = "mock"
 
     async def _inner_get_response(
         self, *, messages: Sequence[Message], stream: bool, options, **kwargs
     ):
-        # The agent's marker-bearing system instructions arrive via
-        # options["instructions"] (agent_framework.Agent), not as a
-        # message — only the user prompt is in `messages`. The marker is
-        # used only to pick a handler; the handler itself must run on
-        # the prompt text alone; the instructions text describes dates
-        # like "expiration date" that would otherwise shadow real dates
-        # in the contract text.
+        # Marker-bearing instructions arrive via options["instructions"],
+        # not messages (agent_framework.Agent).
         instructions = (options or {}).get("instructions", "") if hasattr(options, "get") else ""
         prompt_text = "\n".join(m.text for m in messages if m.text)
 

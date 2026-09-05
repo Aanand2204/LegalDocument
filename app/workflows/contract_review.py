@@ -1,25 +1,5 @@
-"""The controlled MAF workflow (plan sections 13-14): Intake -> Clause
-Extraction -> Risk Analysis -> Deadline Extraction -> Compliance ->
-Governance.
-
-Uses the real `agent_framework` `Executor`/`WorkflowBuilder` API — each
-pipeline stage is its own `Executor` with a single `@handler` method,
-chained with `add_edge`. This is a straight sequential chain rather than
-the fan-out/fan-in shown in the plan's fuller diagram (section 13); see
-the implementation plan's "Workflow shape" note for why, and
-`add_fan_out_edges`/`add_fan_in_edges` are the one-file change that would
-parallelize Risk and Deadline later.
-
-Governance only ever *yields a recommendation* — see GovernanceExecutor
-below — never an approval/rejection; that stays with the lawyer-facing
-API endpoints in api/reviews.py.
-
-`agent_framework` deep-copies messages as they cross executors (it
-supports workflow checkpointing/state history), so `PipelineState` below
-carries only plain, copyable data — no SQLAlchemy `Session` or ORM
-objects. Each `Executor` instead receives the `Session` through its own
-constructor and keeps it as `self.db`, local to this one run.
-"""
+"""The Intake -> Clause -> Risk -> Deadline -> Compliance -> Governance
+workflow, built on agent_framework's Executor/WorkflowBuilder API."""
 from __future__ import annotations
 
 import datetime as dt
@@ -46,12 +26,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PipelineState:
-    """Carried between every stage of one contract's review run.
-
-    Deliberately plain data (ints, strings, dicts) — see the module
-    docstring for why no `Session`/ORM object belongs here.
-    """
-
+    # agent_framework deep-copies messages between executors, so this
+    # carries only plain, copyable data — no Session/ORM objects.
     contract_id: int
     text: str
     current_document_hash: str
@@ -64,8 +40,6 @@ class PipelineState:
 
 
 class _DbExecutor(Executor):
-    """Common base: an Executor bound to one Session for this run."""
-
     def __init__(self, db: Session, *, id: str) -> None:
         super().__init__(id=id)
         self.db = db
@@ -259,22 +233,14 @@ class ComplianceExecutor(_DbExecutor):
 
 
 class GovernanceExecutor(_DbExecutor):
-    """Terminal stage — yields a recommendation only.
-
-    Structurally cannot approve or reject a contract (RULE-001): it has
-    no code path that writes `Contract.status` to anything but
-    "analyzed" or "under_review". Only api/reviews.py, driven by a
-    lawyer, can set approved/rejected.
-    """
+    """Terminal stage — yields a recommendation only (RULE-001): no code
+    path here sets Contract.status to approved/rejected."""
 
     @handler
     async def run(self, state: PipelineState, ctx: WorkflowContext[None, dict]) -> None:
         self._log_stage_start(state)
         contract = repo.get_contract(self.db, state.contract_id)
         model_name, model_version = model_identity()
-        # The text that ends up in the permanent audit trail / UI (see
-        # riskCardHtml in frontend/app.js) — RULE-007 scans it for
-        # obvious sensitive-identifier patterns before that happens.
         log_text = " ".join(
             f"{r.get('reason', '')} {r.get('recommendation', '')}" for r in state.risks_raw
         )
@@ -283,8 +249,6 @@ class GovernanceExecutor(_DbExecutor):
             risk_scores=state.risk_scores,
             confidences=state.confidences,
             risks=state.risks_raw,
-            # Every prior stage already wrote a GovernanceEvent via
-            # audit.log_agent_run, so RULE-004 is satisfied for this run.
             audit_event_logged=True,
             original_document_hash=contract.document_hash,
             current_document_hash=state.current_document_hash,
@@ -337,17 +301,6 @@ def build_workflow(db: Session) -> Workflow:
 async def run_contract_review(
     db: Session, contract_id: int, text: str, *, current_document_hash: str
 ) -> dict:
-    """Run the full Intake -> ... -> Governance chain for one contract.
-
-    `current_document_hash` is the SHA-256 of the file bytes read right
-    before this run (see api/contracts.py::analyze_contract) — compared
-    against the contract's stored `document_hash` by GovernanceExecutor
-    (RULE-006: the AI must not be analyzing a document that's been
-    swapped out since upload).
-
-    Returns the single dict GovernanceExecutor yields (see above) —
-    everything the API needs to answer `POST /contracts/{id}/analyze`.
-    """
     workflow = build_workflow(db)
     state = PipelineState(contract_id=contract_id, text=text, current_document_hash=current_document_hash)
     result = await workflow.run(state)

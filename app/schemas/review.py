@@ -9,10 +9,6 @@ ReviewDecision = Literal["approved", "rejected", "request_changes"]
 
 
 class ReviewCreateRequest(BaseModel):
-    """No `lawyer_id` field — that identity now comes from the
-    authenticated session (see api/reviews.py), not a client-supplied
-    string nobody verified."""
-
     decision: ReviewDecision
     comments: str | None = None
 

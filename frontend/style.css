@@ -1,17 +1,9 @@
-/* ==========================================================================
-   LegalGuard AI — dashboard
-   Dark-only "governance command center" theme. Color roles below follow
-   the validated dark-mode reference palette (status + chrome/ink steps
-   used verbatim, not re-derived) — see the dataviz skill's palette.md.
-   Risk levels ARE the status scale: LOW=good, MEDIUM=warning, HIGH=serious,
-   CRITICAL=critical — always icon + label, never color alone.
-   ========================================================================== */
+/* Dark "governance command center" theme. Risk levels map to the status
+   scale: LOW=good, MEDIUM=warning, HIGH=serious, CRITICAL=critical. */
 
 :root {
   color-scheme: dark;
 
-  /* Surfaces — page plane sits behind, card surface is where status
-     colors below are contrast-validated. */
   --page-plane: #08090b;
   --surface-1: #14161b;
   --surface-2: #1a1d24;
@@ -19,19 +11,15 @@
   --border: rgba(255, 255, 255, 0.09);
   --border-strong: rgba(255, 255, 255, 0.16);
 
-  /* Ink */
   --text-primary: #f5f6f8;
   --text-secondary: #b9bcc7;
   --text-muted: #7b7f8c;
 
-  /* Brand accent — UI chrome only (nav, buttons, glow); never used to
-     encode risk/status data. */
   --accent: #2fd9c7;
   --accent-strong: #17c2b0;
   --accent-soft: rgba(47, 217, 199, 0.14);
   --accent-glow: rgba(47, 217, 199, 0.35);
 
-  /* Status palette (fixed, reserved — see dataviz skill palette.md) */
   --status-good: #0ca30c;
   --status-good-soft: rgba(12, 163, 12, 0.14);
   --status-warning: #fab219;
@@ -60,8 +48,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Faint animated grid + glow wash on the page plane — decorative, sits
-   behind every surface, never behind text. */
 body::before {
   content: "";
   position: fixed;
@@ -85,9 +71,7 @@ a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 svg { display: block; }
 
-/* ==========================================================================
-   Shell layout
-   ========================================================================== */
+/* Shell layout */
 
 .shell {
   position: relative;
@@ -208,9 +192,7 @@ svg { display: block; }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ==========================================================================
-   Page header
-   ========================================================================== */
+/* Page header */
 
 .page-head {
   display: flex;
@@ -232,9 +214,7 @@ svg { display: block; }
 }
 .crumb a:hover { color: var(--accent); }
 
-/* ==========================================================================
-   Buttons
-   ========================================================================== */
+/* Buttons */
 
 .btn {
   display: inline-flex;
@@ -268,9 +248,7 @@ svg { display: block; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 .btn svg { width: 15px; height: 15px; fill: currentColor; }
 
-/* ==========================================================================
-   Stat tiles
-   ========================================================================== */
+/* Stat tiles */
 
 .stat-grid {
   display: grid;
@@ -308,9 +286,7 @@ svg { display: block; }
 }
 .stat-label { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
 
-/* ==========================================================================
-   Section / card
-   ========================================================================== */
+/* Section / card */
 
 .card {
   background: var(--surface-1);
@@ -330,9 +306,7 @@ svg { display: block; }
 .card-head h2 { margin: 0; font-size: 14.5px; font-weight: 620; }
 .card-head .hint { font-size: 12px; color: var(--text-muted); }
 
-/* ==========================================================================
-   Status badges — always icon (dot) + label, never color alone
-   ========================================================================== */
+/* Status badges — always icon (dot) + label, never color alone */
 
 .badge {
   display: inline-flex;
@@ -354,9 +328,7 @@ svg { display: block; }
 .badge-neutral { background: var(--surface-3); color: var(--text-secondary); }
 .badge-accent { background: var(--accent-soft); color: var(--accent); }
 
-/* ==========================================================================
-   Contracts table
-   ========================================================================== */
+/* Contracts table */
 
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th {
@@ -385,9 +357,7 @@ svg { display: block; }
 }
 .empty-state svg { width: 34px; height: 34px; fill: var(--text-muted); opacity: 0.5; margin-bottom: 10px; }
 
-/* ==========================================================================
-   Upload dropzone
-   ========================================================================== */
+/* Upload dropzone */
 
 .dropzone {
   display: flex;
@@ -417,9 +387,7 @@ svg { display: block; }
 .dropzone strong { color: var(--text-primary); }
 .dropzone input { display: none; }
 
-/* ==========================================================================
-   Risk gauge (meter): fill carries severity, track is a dim ring
-   ========================================================================== */
+/* Risk gauge (meter): fill carries severity, track is a dim ring */
 
 .gauge-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 .gauge {
@@ -447,9 +415,7 @@ svg { display: block; }
 .gauge-legend .row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
 .gauge-legend .swatch { width: 9px; height: 9px; border-radius: 2px; }
 
-/* ==========================================================================
-   Risk cards
-   ========================================================================== */
+/* Risk cards */
 
 .risk-list { display: flex; flex-direction: column; gap: 12px; }
 .risk-card {
@@ -469,10 +435,7 @@ svg { display: block; }
 .risk-card-actions { display: flex; gap: 8px; margin-top: 12px; }
 .risk-decision { margin-top: 10px; font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 6px; }
 
-/* ==========================================================================
-   Clause / evidence dropdowns — plain <details>, so the expand/collapse
-   needs no JS and stays keyboard- and screen-reader-accessible.
-   ========================================================================== */
+/* Clause / evidence dropdowns */
 
 .clause-list { display: flex; flex-direction: column; gap: 10px; }
 .clause-item {
@@ -515,9 +478,7 @@ svg { display: block; }
   margin: 10px 0;
 }
 
-/* ==========================================================================
-   Compliance checklist
-   ========================================================================== */
+/* Compliance checklist */
 
 .check-list { display: flex; flex-direction: column; gap: 2px; }
 .check-item {
@@ -532,9 +493,7 @@ svg { display: block; }
 .check-icon svg { width: 12px; height: 12px; fill: currentColor; }
 .check-score { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
 
-/* ==========================================================================
-   Deadlines
-   ========================================================================== */
+/* Deadlines */
 
 .deadline-list { display: flex; flex-direction: column; gap: 10px; }
 .deadline-item {
@@ -555,9 +514,7 @@ svg { display: block; }
 .deadline-type { font-size: 13px; font-weight: 560; text-transform: capitalize; }
 .deadline-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-/* ==========================================================================
-   Audit trail
-   ========================================================================== */
+/* Audit trail */
 
 .timeline { position: relative; padding-left: 22px; }
 .timeline::before {
@@ -579,9 +536,7 @@ svg { display: block; }
 .timeline-title { font-size: 13px; font-weight: 570; margin: 2px 0; }
 .timeline-detail { font-size: 12px; color: var(--text-secondary); }
 
-/* ==========================================================================
-   Toasts
-   ========================================================================== */
+/* Toasts */
 
 .toast-stack {
   position: fixed; right: 20px; bottom: 20px; z-index: 60;
@@ -604,9 +559,7 @@ svg { display: block; }
 .toast.error .dot { background: var(--status-critical); box-shadow: 0 0 8px var(--status-critical); }
 .toast.info .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
-/* ==========================================================================
-   Modal
-   ========================================================================== */
+/* Modal */
 
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 70;
@@ -633,9 +586,7 @@ svg { display: block; }
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
-/* ==========================================================================
-   Loading / skeleton
-   ========================================================================== */
+/* Loading / skeleton */
 
 .spinner {
   width: 22px; height: 22px; border-radius: 50%;
@@ -658,16 +609,12 @@ svg { display: block; }
   100% { box-shadow: 0 0 0 0 rgba(208,59,59,0); }
 }
 
-/* ==========================================================================
-   Grid helpers
-   ========================================================================== */
+/* Grid helpers */
 
 .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: start; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
-/* ==========================================================================
-   Responsive
-   ========================================================================== */
+/* Responsive */
 
 @media (max-width: 760px) {
   .shell { grid-template-columns: 1fr; }
@@ -689,17 +636,11 @@ svg { display: block; }
   .main { padding: 20px 16px 48px; }
 }
 
-/* ==========================================================================
-   Login / register / homepage — routes with no sidebar
-   ========================================================================== */
+/* Login / register / homepage — routes with no sidebar */
 
-/* No sidebar at all: the public homepage plus both auth forms. */
 body.no-shell .rail { display: none; }
 body.no-shell .shell { grid-template-columns: 1fr; }
 
-/* Auth forms additionally get the small centered-card treatment — the
-   homepage does NOT (it keeps .main/.view's normal full-width flow, the
-   same one Dashboard/Contracts use, since it's a real multi-section page). */
 body.auth-form-page .main {
   display: flex;
   align-items: center;
@@ -768,9 +709,7 @@ body.auth-form-page .view { width: 100%; max-width: 380px; animation: view-in 0.
 .auth-switch a { color: var(--accent); font-weight: 560; }
 .auth-switch a:hover { text-decoration: underline; }
 
-/* ==========================================================================
-   Public homepage
-   ========================================================================== */
+/* Public homepage */
 
 .home { max-width: 1180px; margin: 0 auto; }
 

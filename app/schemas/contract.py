@@ -52,11 +52,6 @@ class ComplianceRequirement(BaseModel):
 
 
 class ComplianceResponse(BaseModel):
-    """Recomputed on demand from already-persisted clauses (no new agent
-    run, no governance/audit event) — see api/contracts.py. Lets the
-    contract detail view show the same checklist `/analyze` returned,
-    even after a page reload."""
-
     policy_id: str
     policy_name: str
     results: list[ComplianceRequirement]

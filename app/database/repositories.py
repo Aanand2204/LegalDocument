@@ -1,11 +1,4 @@
-"""Thin per-entity query helpers.
-
-Kept intentionally simple (plain functions over a `Session`, no repository
-base class/ORM abstraction layer) — there's one database and one ORM here,
-so an abstraction over that would add indirection without a second
-implementation to justify it. This module exists to keep query logic out
-of the API route handlers, not to hide SQLAlchemy.
-"""
+"""Thin per-entity query helpers, kept out of the API route handlers."""
 from __future__ import annotations
 
 import datetime as dt
@@ -39,9 +32,6 @@ def _persist_all(db: Session, rows: list[_Row]) -> list[_Row]:
 
 
 def next_contract_number() -> str:
-    """Human-friendly contract id, e.g. CNT-3F2A1B. Uniqueness is enforced
-    by the `contracts.contract_number` unique constraint, not by this
-    generator, so callers should handle a rare collision by retrying."""
     return f"CNT-{uuid.uuid4().hex[:6].upper()}"
 
 
@@ -115,7 +105,7 @@ def list_deadlines(
     db: Session, contract_id: int | None = None, *, contract_ids: set[int] | None = None
 ) -> list[Deadline]:
     if contract_ids is not None and not contract_ids:
-        return []  # avoids an empty-IN warning; no ids means no rows anyway
+        return []
     stmt = select(Deadline)
     if contract_id is not None:
         stmt = stmt.where(Deadline.contract_id == contract_id)
@@ -204,9 +194,6 @@ def create_session(db: Session, *, user_id: int, token_hash: str, ttl_minutes: i
 
 
 def get_valid_session(db: Session, token_hash: str) -> UserSession | None:
-    """The session for `token_hash`, or None if it doesn't exist, has
-    expired, or was revoked (logged out) — callers don't need to check
-    those separately."""
     stmt = select(UserSession).where(UserSession.token_hash == token_hash)
     session = db.scalars(stmt).first()
     if session is None or session.revoked_at is not None:
@@ -217,9 +204,6 @@ def get_valid_session(db: Session, token_hash: str) -> UserSession | None:
 
 
 def touch_session(db: Session, session: UserSession, *, ttl_minutes: int) -> None:
-    """Slide `expires_at` forward on activity — see `get_valid_session`:
-    with no further activity, it simply stops being pushed out and the
-    session lapses on its own `ttl_minutes` after the last request."""
     session.expires_at = dt.datetime.now(dt.UTC) + dt.timedelta(minutes=ttl_minutes)
     db.commit()
 

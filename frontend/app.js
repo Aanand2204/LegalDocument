@@ -1,25 +1,14 @@
 "use strict";
 
-/* ==========================================================================
-   LegalGuard AI — dashboard client
-   Vanilla JS, no build step, no framework. One hash-routed SPA talking to
-   the FastAPI backend on the same origin. Organized top to bottom as:
-   state -> api -> toast/modal -> formatters -> components -> views ->
-   actions -> router -> init.
-   ========================================================================== */
-
-/* ---- State -------------------------------------------------------------- */
+/* State */
 
 const state = {
-  user: null, // {id, email} once GET /auth/me succeeds — see checkAuth()
+  user: null,
   contracts: [],
   contractsLoadedAt: 0,
 };
 
-/* ---- API helper ----------------------------------------------------------
-   Identity comes from the httpOnly session cookie the browser sends
-   automatically (credentials: "same-origin") — see app/api/deps.py.
-   There is no client-settable identity header anymore. */
+/* API helper */
 
 async function api(path, { method = "GET", body, isForm = false } = {}) {
   const headers = {};
@@ -45,7 +34,7 @@ async function api(path, { method = "GET", body, isForm = false } = {}) {
       const payload = await response.json();
       detail = formatErrorDetail(payload?.detail) ?? detail;
     } catch {
-      /* body wasn't JSON — keep the status-line message */
+      /* body wasn't JSON */
     }
     const error = new Error(detail);
     error.status = response.status;
@@ -55,12 +44,8 @@ async function api(path, { method = "GET", body, isForm = false } = {}) {
   return response.json();
 }
 
-/** FastAPI's `detail` is a plain string for a handler-raised
- * HTTPException ("Invalid email or password") but a *list* of
- * {loc, msg, ...} objects for an automatic Pydantic validation failure
- * (422) — passing either straight to `new Error()` mishandles the list
- * form (stringifies to "[object Object]"). Returns null for anything
- * else so the caller's generic status-line message is used instead. */
+// FastAPI's detail is a string for a raised HTTPException but a list of
+// {loc, msg} objects for a 422 validation error.
 function formatErrorDetail(detail) {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
@@ -81,9 +66,7 @@ function setConnState(online) {
   el.querySelector(".conn-label").textContent = online ? "API online" : "API unreachable";
 }
 
-/* ---- Toasts --------------------------------------------------------------
-   status color = the toast's own dot, never the message text (text stays
-   in text tokens — see the risk-badge convention below). */
+/* Toasts */
 
 function toast(message, kind = "info") {
   const stack = document.getElementById("toast-stack");
@@ -98,11 +81,8 @@ function toast(message, kind = "info") {
   }, 4200);
 }
 
-/* ---- Modal (confirm / reason-prompt) ------------------------------------ */
+/* Modal */
 
-/** Both call sites (risk approve/reject, contract review) need a reason
- * recorded for the audit trail, so this always shows the textarea rather
- * than taking a withReason flag no caller ever sets to false. */
 function openModal({ title, description, confirmLabel = "Confirm", danger = false }) {
   return new Promise((resolve) => {
     const root = document.getElementById("modal-root");
@@ -134,7 +114,7 @@ function openModal({ title, description, confirmLabel = "Confirm", danger = fals
   });
 }
 
-/* ---- Formatters ---------------------------------------------------------- */
+/* Formatters */
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -161,7 +141,6 @@ function levelSlug(level) {
   return String(level || "low").toLowerCase();
 }
 
-/** Status badge: color + icon dot + label — never color alone. */
 function badgeHtml(level, label) {
   const slug = levelSlug(level);
   return `<span class="badge badge-${slug}"><span class="dot"></span>${escapeHtml(label ?? level ?? "—")}</span>`;
@@ -180,10 +159,7 @@ function statusBadgeHtml(status) {
   return badgeHtml(slug, label);
 }
 
-/* ---- Components ------------------------------------------------------------
-   Each returns an HTML string. Gauges/badges follow the dataviz skill's
-   "meter" pattern: fill carries severity, unfilled track is a dim ring,
-   value is never encoded by color alone. */
+/* Components */
 
 function statTileHtml({ icon, tone = "", value, label }) {
   return `
@@ -233,9 +209,6 @@ function gaugeHtml(score, level) {
 
 const CHEVRON_ICON = '<svg class="chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
 
-/** A native <details> disclosure — expandable, keyboard-accessible, no
- * JS needed for the toggle itself. Used for clause paragraphs and, on a
- * risk card, the source clause backing that risk's reasoning. */
 function evidenceDropdownHtml({ summary, hint, body }) {
   return `
     <details class="clause-item">
@@ -256,10 +229,6 @@ function clauseItemHtml(clause) {
   });
 }
 
-/** `sourceClause` is the Clause row `risk.clause_id` points at (looked
- * up by the caller — see renderContractDetail) — the actual contract
- * paragraph the AI's "Reason" is grounded in, not just its own summary
- * of it. Missing only if the risk isn't tied to one specific clause. */
 function riskCardHtml(risk, sourceClause) {
   const decided = Boolean(risk.human_decision);
   return `
@@ -304,11 +273,6 @@ function checkItemHtml(item) {
     </div>`;
 }
 
-/** Approved/rejected is terminal — show the recorded decision instead
- * of the action buttons (same "decided vs. pending" convention as
- * riskCardHtml). A "request_changes" review isn't terminal (status goes
- * back to under_review, not a request_changes status), so the buttons
- * stay, with the prior request surfaced as context above them. */
 function reviewDecisionHtml(contract) {
   const review = contract.latest_review;
   const decided = contract.status === "approved" || contract.status === "rejected";
@@ -365,7 +329,7 @@ function timelineItemHtml(entry) {
     </div>`;
 }
 
-/* ---- Views ---------------------------------------------------------------- */
+/* Views */
 
 const view = () => document.getElementById("view");
 
@@ -431,8 +395,6 @@ function errorStateHtml(err) {
   return `<div class="card"><div class="empty-state">${ICONS.alert}<div>${escapeHtml(err.message || String(err))}</div></div></div>`;
 }
 
-/** A 401 mid-session means the cookie expired or was revoked elsewhere —
- * send the user back to login instead of showing a raw error card. */
 function handleViewError(err) {
   if (err.status === 401) {
     state.user = null;
@@ -650,8 +612,6 @@ function wireDetailActions(id) {
       });
       if (!outcome) return;
       try {
-        // Who's deciding comes from the session cookie server-side, not
-        // anything sent here — see app/schemas/risk.py.
         await api(`/risks/${btn.dataset.id}/${isReject ? "reject" : "approve"}`, {
           method: "POST",
           body: { reason: outcome.reason || null },
@@ -675,8 +635,6 @@ function wireDetailActions(id) {
       });
       if (!outcome) return;
       try {
-        // Same here — the reviewing lawyer's identity comes from the
-        // session, not a client-supplied field (app/schemas/review.py).
         await api(`/contracts/${id}/review`, {
           method: "POST",
           body: { decision, comments: outcome.reason || null },
@@ -758,11 +716,7 @@ async function renderAudit(id) {
   }
 }
 
-/* ---- Homepage --------------------------------------------------------------
-   The public front door — reachable with no session (app boot with no
-   cookie lands here instead of a bare login form) and by clicking the
-   brand mark from anywhere, logged in or not (body.no-shell hides the
-   sidebar for this route regardless of auth state — see style.css). */
+/* Homepage */
 
 function renderHome() {
   const loggedIn = Boolean(state.user);
@@ -861,9 +815,7 @@ function renderHome() {
   document.getElementById("home-logout")?.addEventListener("click", logout);
 }
 
-/* ---- Auth views ------------------------------------------------------------
-   The two auth forms; body.auth-form-page gives them the small centered-
-   card treatment (see style.css) on top of body.no-shell's hidden sidebar. */
+/* Auth views */
 
 function authBrandHtml() {
   return `
@@ -873,9 +825,6 @@ function authBrandHtml() {
     </div>`;
 }
 
-/** Shared card/form markup for both auth views — login and register
- * differ only in copy, the password field's attributes, and which
- * endpoint the form submits to (see wireAuthForm). */
 function authCardHtml({ title, sub, passwordAttrs, submitLabel, switchText, switchLabel, switchHref }) {
   return `
     ${authBrandHtml()}
@@ -945,15 +894,7 @@ function wireAuthForm({ endpoint, submitLabel, busyLabel }) {
   });
 }
 
-/* ---- Router ----------------------------------------------------------------
-   /home, /login, /register need no session — an app boot with no cookie
-   lands on /home (see route(), below) rather than a bare login form.
-   /login and /register additionally bounce an already-authenticated
-   visitor back to the dashboard (pointless to show a login form to
-   someone already logged in); /home does not — clicking the brand mark
-   is always allowed, logged in or not. Every other route requires
-   state.user, checked fresh on every navigation — a session that
-   expires mid-use gets caught here just as much as at boot. */
+/* Router */
 
 const NO_SESSION_REQUIRED = new Set(["/home", "/login", "/register"]);
 const BOUNCE_IF_LOGGED_IN = new Set(["/login", "/register"]);
@@ -998,7 +939,7 @@ function route() {
   match.render(path.match(match.pattern));
 }
 
-/* ---- Init -------------------------------------------------------------------- */
+/* Init */
 
 function renderUserChip() {
   if (!state.user) return;
@@ -1006,14 +947,11 @@ function renderUserChip() {
   document.getElementById("user-email").textContent = state.user.email;
 }
 
-/** Shared by the sidebar's logout button and the homepage's (when
- * viewing it while already logged in) — see initLogout() and
- * renderHome(). */
 async function logout() {
   try {
     await api("/auth/logout", { method: "POST" });
   } catch {
-    /* the cookie may already be invalid — log out client-side regardless */
+    /* cookie may already be invalid */
   }
   state.user = null;
   location.hash = "#/home";
@@ -1024,8 +962,6 @@ function initLogout() {
   document.getElementById("logout-btn").addEventListener("click", logout);
 }
 
-/** Runs once at boot: is there already a valid session? Determines
- * whether the very first render is the app shell or the public homepage. */
 async function checkAuth() {
   try {
     state.user = await api("/auth/me");
@@ -1038,7 +974,7 @@ async function pingHealth() {
   try {
     await api("/health");
   } catch {
-    /* setConnState already flipped by api() on network failure */
+    /* setConnState already flipped by api() */
   }
 }
 

@@ -1,4 +1,4 @@
-"""Read-only risk and clause endpoints (plan section 20)."""
+"""Read-only risk and clause endpoints."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

@@ -1,18 +1,10 @@
-"""Registration, login, logout, and session-protected access.
-
-No roles — every account can use every endpoint once logged in (see
-app/api/deps.py); these tests cover the login lifecycle itself, not
-who's allowed to do what.
-"""
+"""Registration, login, logout, and session-protected access."""
 from __future__ import annotations
 
 import uuid
 
 
 def _email(prefix: str) -> str:
-    # example.com is RFC 2606-reserved for documentation/testing and
-    # passes email-validator's special-use-domain check; .local/.test
-    # do not (see tests/conftest.py::login_as for the same fix).
     return f"{prefix}-{uuid.uuid4().hex[:8]}@example.com"
 
 

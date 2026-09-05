@@ -25,16 +25,4 @@ class RiskOut(BaseModel):
 
 
 class RiskDecisionRequest(BaseModel):
-    """Body for POST /risks/{id}/approve and /risks/{id}/reject.
-
-    "approve" records the lawyer confirming the AI's risk finding stands;
-    "reject" records the lawyer overriding it as not applicable — the
-    plan section 24 example ("AI: HIGH RISK" / "Human: ACCEPTABLE,
-    covered by master agreement"). human_decision is CONFIRMED or
-    OVERRIDDEN respectively, never the AI's own risk_level. No
-    `reviewed_by` field — that identity now comes from the authenticated
-    session (see api/reviews.py), not a client-supplied string nobody
-    verified.
-    """
-
     reason: str | None = None

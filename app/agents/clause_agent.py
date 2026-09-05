@@ -1,9 +1,5 @@
-"""Clause Extraction Agent (plan section 6).
-
-Identifies standard clause types (termination, liability, ...) with
-their source text, so a lawyer can always trace a finding back to the
-original contract wording rather than trusting a bare summary.
-"""
+"""Clause Extraction Agent — identifies standard clause types with their
+source text so a lawyer can trace a finding back to the wording."""
 from __future__ import annotations
 
 from app.agents.base import run_contract_agent

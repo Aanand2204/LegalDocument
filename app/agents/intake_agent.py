@@ -1,10 +1,4 @@
-"""Agent 1 — Document Intake Agent (plan section 5).
-
-Identifies contract type, parties, and the effective date from the raw
-extracted document text. Page counting and file-level metadata come
-directly from services/document_service.py (no LLM needed for that), so
-this agent's job is exactly the natural-language part.
-"""
+"""Intake Agent — identifies contract type, parties, and effective date."""
 from __future__ import annotations
 
 from app.agents.base import run_contract_agent

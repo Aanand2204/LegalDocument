@@ -1,11 +1,5 @@
-"""Risk Analysis Agent (plan sections 7-8).
-
-Evaluates extracted clauses for risk and returns a *recommendation*
-only — per the plan's core principle ("AI recommends, lawyer decides"),
-nothing here or in its output ever marks a contract approved or
-rejected. That authority is structurally reserved to governance/human
-review endpoints (see governance/evaluator.py, api/reviews.py).
-"""
+"""Risk Analysis Agent — evaluates clauses for risk and returns a
+recommendation only; it never marks a contract approved or rejected."""
 from __future__ import annotations
 
 from app.agents.base import run_contract_agent
@@ -27,7 +21,6 @@ Respond with a single JSON object only:
 "score": int, "reason": str, "recommendation": str, "confidence": float}]}
 """
 
-# (score_ceiling, level) bands per the plan's risk scale (section 8).
 _LEVEL_BANDS: tuple[tuple[int, str], ...] = (
     (30, "LOW"),
     (60, "MEDIUM"),
@@ -37,7 +30,6 @@ _LEVEL_BANDS: tuple[tuple[int, str], ...] = (
 
 
 def classify_risk_level(score: int) -> str:
-    """Map a 0-100 risk score to LOW/MEDIUM/HIGH/CRITICAL per the plan's scale."""
     for ceiling, level in _LEVEL_BANDS:
         if score <= ceiling:
             return level

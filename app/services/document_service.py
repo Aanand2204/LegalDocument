@@ -1,10 +1,4 @@
-"""PDF/DOCX text extraction, page detection, and document-integrity hashing.
-
-No LLM involved — this is deterministic parsing (plan section 2,
-"Document Processing"). agents/intake_agent.py and the other agents all
-consume the plain text this module extracts; they never see the raw
-file.
-"""
+"""PDF/DOCX text extraction and document-integrity hashing."""
 from __future__ import annotations
 
 import hashlib

@@ -1,11 +1,4 @@
-"""Deadline monitoring (plan section 27).
-
-`check_deadlines` is the logic a scheduled job would call every morning;
-this slice exposes it via a plain function reachable from an API endpoint
-(`POST /deadlines/check`) instead of wrapping it in an Azure Function —
-see the implementation plan's "Explicitly deferred" list. The scheduling
-*mechanism* is what's deferred; this is the real check logic.
-"""
+"""Deadline monitoring — the 90/30/7-day sweep behind POST /deadlines/check."""
 from __future__ import annotations
 
 import datetime as dt
@@ -17,7 +10,6 @@ from app.database import repositories as repo
 from app.database.models import Contract, Deadline
 from app.services import notification_service
 
-# (max_days_remaining, status_label), closest-due window first.
 _WINDOWS: tuple[tuple[int, str], ...] = (
     (7, "notified_7"),
     (30, "notified_30"),
@@ -44,13 +36,6 @@ def _window_for(days_remaining: int) -> str | None:
 def check_deadlines(
     db: Session, *, today: dt.date | None = None, contract_ids: set[int] | None = None
 ) -> list[DeadlineCheckResult]:
-    """Find deadlines due within 90/30/7 days, notify, and advance their status.
-
-    Idempotent: a deadline already at (or past) a given window's status
-    is not re-notified for that window on a later call. `contract_ids`
-    restricts the sweep to those contracts — the API route uses this to
-    scope the check to the caller's own contracts (see app/api/deadlines.py).
-    """
     today = today or dt.date.today()
     results: list[DeadlineCheckResult] = []
 

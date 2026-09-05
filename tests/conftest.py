@@ -1,18 +1,5 @@
-"""Shared test fixtures.
-
-LLM_PROVIDER is pinned to "mock" before any app module is imported, so
-every test runs fully offline as far as the LLM goes. The database is
-NOT mocked or swapped for a local file, though — per the Aiven-Postgres
-plan, tests run against the exact same database the app itself uses
-(`settings.database_url`). Isolation instead comes from wrapping every
-test in an outer transaction that's always rolled back at the end
-(SQLAlchemy's documented external-transaction pattern,
-`join_transaction_mode="create_savepoint"`): application code's own
-`session.commit()` calls (throughout app/database/repositories.py) only
-commit to a SAVEPOINT under that outer transaction, so the rollback
-undoes everything regardless of what got "committed" along the way.
-This means every test run needs network access to Aiven.
-"""
+"""Shared test fixtures. Runs against the real DATABASE_URL, isolated by
+wrapping each test in a transaction that's always rolled back."""
 from __future__ import annotations
 
 import os
@@ -21,11 +8,6 @@ import tempfile
 import uuid
 
 os.environ.setdefault("LLM_PROVIDER", "mock")
-# Uploaded-file writes (app/api/contracts.py::upload_contract) land on
-# real disk regardless of the DB-transaction rollback below — without
-# this, every test run permanently orphans a file under the real
-# documents/ dir. Redirect it to a throwaway temp dir instead, removed
-# by _cleanup_test_documents_dir once the whole suite finishes.
 os.environ.setdefault("DOCUMENTS_DIR", tempfile.mkdtemp(prefix="legalguard_test_documents_"))
 
 import pytest
@@ -39,9 +21,6 @@ from config import get_settings
 
 
 def make_minimal_pdf(text: str) -> bytes:
-    """Build a tiny valid one-page PDF containing `text`, for tests that
-    exercise real PDF parsing without adding a heavyweight PDF-writing
-    dependency just for fixtures."""
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -70,10 +49,6 @@ def make_minimal_pdf(text: str) -> bytes:
 
 @pytest.fixture(scope="session", autouse=True)
 def _tables_exist():
-    """Runs once per test session: creates any tables that don't already
-    exist on the real database. Autouse so a test file that never spins
-    up the FastAPI app (and so never runs its `lifespan`/`init_db()`)
-    still has a schema to work with."""
     Base.metadata.create_all(bind=engine)
 
 
@@ -99,10 +74,6 @@ def db_session():
 
 @pytest.fixture()
 def client(db_session) -> TestClient:
-    """A TestClient whose every request is served through `db_session`'s
-    connection — so a user/contract/etc. seeded directly via `db_session`
-    in a test is visible to the API calls that test makes, and it all
-    rolls back together when the test ends."""
     from main import app
 
     app.dependency_overrides[get_db] = lambda: db_session
@@ -114,19 +85,9 @@ def client(db_session) -> TestClient:
 
 
 def login_as(client: TestClient, db_session, *, email: str | None = None) -> User:
-    """Test-only helper: seed a user directly and authenticate `client`
-    as them via a real session row — the same session mechanism
-    api/auth.py's own login issues, just skipping the HTTP round trip and
-    password hashing/checking (tests that need to exercise login itself
-    go through the real /auth/login endpoint instead — see test_auth.py).
-    """
     from app.database import repositories as repo
     from app.services import auth_service
 
-    # example.com is RFC 2606-reserved for documentation/testing —
-    # unlike .local/.test/.invalid it passes email-validator's
-    # special-use-domain check, which real login/register emails go
-    # through too (see app/schemas/auth.py).
     email = email or f"user-{uuid.uuid4().hex[:8]}@example.com"
     user = repo.create_user(db_session, email=email, password_hash=auth_service.hash_password("Testpass123!"))
     switch_to(client, db_session, user)
@@ -134,10 +95,6 @@ def login_as(client: TestClient, db_session, *, email: str | None = None) -> Use
 
 
 def switch_to(client: TestClient, db_session, user) -> None:
-    """Re-authenticate `client` as an *already-created* user (e.g. one a
-    prior `login_as` call returned) — a fresh session, no new user row.
-    Calling `login_as` again with that user's email would violate the
-    `users.email` unique constraint, since it always creates a new user."""
     from app.database import repositories as repo
     from app.services import auth_service
 

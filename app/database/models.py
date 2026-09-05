@@ -1,15 +1,4 @@
-"""SQLAlchemy ORM models.
-
-Mirrors the data architecture in the implementation plan (contracts,
-clauses, risks, deadlines, reviews, governance_events, audit_logs) with
-two intentional additions, called out where they occur:
-
-- `Contract.document_hash` / `document_path` for the document-integrity
-  requirement (plan section 30).
-- `Risk.human_decision` / `human_reason` / `reviewed_by` / `reviewed_at`
-  for AI-override tracking (plan section 24), beyond the minimal `risks`
-  schema in section 16.
-"""
+"""SQLAlchemy ORM models."""
 from __future__ import annotations
 
 import datetime as dt
@@ -39,7 +28,7 @@ class Contract(Base):
     status: Mapped[str] = mapped_column(String(20), default="uploaded")
 
     document_path: Mapped[str] = mapped_column(String(500))
-    document_hash: Mapped[str] = mapped_column(String(64))  # sha256 hex digest
+    document_hash: Mapped[str] = mapped_column(String(64))
     uploaded_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
@@ -56,10 +45,6 @@ class Contract(Base):
 
     @property
     def latest_review(self) -> Review | None:
-        """Most recent human decision, if any — a contract can be
-        reviewed more than once (e.g. "request changes" then a later
-        "approved"), and the frontend only ever needs the latest one to
-        know whether/how it was decided (see ContractDetail)."""
         return max(self.reviews, key=lambda r: r.reviewed_at, default=None)
 
 
@@ -85,14 +70,12 @@ class Risk(Base):
     clause_id: Mapped[int | None] = mapped_column(ForeignKey("clauses.id"), nullable=True)
     risk_type: Mapped[str] = mapped_column(String(100))
     risk_score: Mapped[int] = mapped_column(Integer)
-    risk_level: Mapped[str] = mapped_column(String(20))  # LOW / MEDIUM / HIGH / CRITICAL
+    risk_level: Mapped[str] = mapped_column(String(20))
     reason: Mapped[str] = mapped_column(Text)
     recommendation: Mapped[str] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float)
     requires_human_review: Mapped[bool] = mapped_column(default=False)
 
-    # AI-override tracking (plan section 24) — set only via the lawyer
-    # approve/reject endpoints, never by an agent.
     human_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
     human_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -125,7 +108,7 @@ class Review(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), index=True)
     lawyer_id: Mapped[str] = mapped_column(String(100))
-    decision: Mapped[str] = mapped_column(String(20))  # approved / rejected / request_changes
+    decision: Mapped[str] = mapped_column(String(20))
     comments: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
@@ -133,8 +116,6 @@ class Review(Base):
 
 
 class GovernanceEvent(Base):
-    """One row per agent execution / governance decision (plan section 11, RULE-004)."""
-
     __tablename__ = "governance_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -149,8 +130,6 @@ class GovernanceEvent(Base):
 
 
 class AuditLog(Base):
-    """General-purpose audit trail for user-initiated actions (plan section 31)."""
-
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -158,19 +137,15 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(100))
     resource: Mapped[str] = mapped_column(String(100))
     timestamp: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    details: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON-encoded string
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class User(Base):
-    """A real account — see app/services/auth_service.py for hashing and
-    app/api/auth.py for register/login/logout. `password_hash` is a
-    bcrypt hash; the plaintext password is never stored or logged."""
-
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(60))  # bcrypt hashes are always 60 chars
+    password_hash: Mapped[str] = mapped_column(String(60))
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_login_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -180,17 +155,14 @@ class User(Base):
 
 
 class UserSession(Base):
-    """A logged-in session, addressed by the hash of an opaque token the
-    browser holds in an httpOnly cookie — the raw token is never stored,
-    only ever exists in that cookie. Named `UserSession`, not `Session`,
-    so it never collides with `sqlalchemy.orm.Session` imported
-    everywhere else in this codebase."""
+    """Named UserSession, not Session, to avoid colliding with
+    sqlalchemy.orm.Session used throughout this codebase."""
 
     __tablename__ = "user_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # sha256 hex
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

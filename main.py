@@ -1,8 +1,4 @@
-"""FastAPI application entrypoint.
-
-Run with: python main.py (equivalent to `uvicorn main:app --reload`,
-just without typing the longer command every time).
-"""
+"""FastAPI application entrypoint. Run with: python main.py"""
 from __future__ import annotations
 
 import logging
@@ -63,9 +59,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok", "app": settings.app_name}
 
-    # Mounted last: Starlette tries routes in registration order, so the
-    # API routes above always win their exact paths first, and everything
-    # else (/, /style.css, /app.js) falls through to the static frontend.
+    # Mounted last so the API routes above win their paths first.
     app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
     return app
@@ -81,9 +75,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=8000,
         reload=True,
-        # Without this, the reload watcher treats our own log/upload
-        # writes (logs/app.log growing on every request, documents/
-        # gaining a file on every upload) as source changes and restarts
-        # the app — the "N changes detected" spam this excludes.
-        reload_excludes=["logs/*", "documents/*"],
+        reload_excludes=["logs/*", "documents/*"],  # avoid restart loops on our own log/upload writes
     )

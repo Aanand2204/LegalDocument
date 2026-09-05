@@ -1,9 +1,4 @@
-"""Unit tests for governance/rules.py and governance/evaluator.py.
-
-Covers plan section 40's required governance test cases: high risk ->
-human review; low confidence -> human review; AI tries to approve ->
-BLOCK; missing evidence -> BLOCK; missing audit event -> BLOCK.
-"""
+"""Unit tests for governance/rules.py and governance/evaluator.py."""
 from __future__ import annotations
 
 from app.governance import rules

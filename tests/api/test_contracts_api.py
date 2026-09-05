@@ -1,13 +1,4 @@
-"""End-to-end API test: upload -> analyze -> risks/clauses/deadlines/audit.
-
-Exercises the real FastAPI app, the real `agent_framework` workflow, and
-a real (hand-built) PDF — only the LLM is mocked (LLM_PROVIDER=mock, set
-in tests/conftest.py). No roles: any logged-in account can perform any
-action, but visibility is scoped per-account (see require_owned_contract
-in app/api/deps.py), so every test here just logs in once via
-tests/conftest.py::login_as and stays that account throughout, except
-where a test is specifically about the ownership boundary.
-"""
+"""End-to-end API test: upload -> analyze -> risks/clauses/deadlines/audit."""
 from __future__ import annotations
 
 import datetime as dt
@@ -58,8 +49,6 @@ def test_analyze_persists_clauses_risks_and_flags_review(client, db_session):
     assert result["contract_id"] == contract_id
     assert result["clause_count"] > 0
     assert result["risk_count"] > 0
-    # The sample text contains "unlimited liability", scored CRITICAL by
-    # the mock risk heuristic — well above the review threshold.
     assert result["requires_human_review"] is True
     assert result["status"] == "under_review"
 
@@ -86,7 +75,6 @@ def test_compliance_endpoint_matches_analyze_and_survives_reload(client, db_sess
     assert compliance["violations"] == analyzed["compliance_violations"]
     assert all("requirement" in r and "satisfied" in r for r in compliance["results"])
 
-    # No new governance event was written by the read-only recompute.
     audit_after_analyze = client.get(f"/audit/{contract_id}").json()
     client.get(f"/contracts/{contract_id}/compliance")
     audit_after_reload = client.get(f"/audit/{contract_id}").json()
@@ -133,7 +121,6 @@ def test_can_override_a_risk_finding(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["human_decision"] == "OVERRIDDEN"
-    # Identity comes from the authenticated session, not the request body.
     assert body["reviewed_by"]
 
 
@@ -163,13 +150,9 @@ def test_upload_rejects_unsupported_file_type(client, db_session):
 
 
 def test_accounts_cannot_see_each_others_contracts(client, db_session):
-    """No roles, but visibility is still scoped per-account (see
-    require_owned_contract in app/api/deps.py) — a contract uploaded by
-    one account is invisible to a different account, both in the list
-    and by direct ID (404, not 403, so the ID's existence isn't leaked)."""
     uploader_contract = _upload(client, db_session)
 
-    login_as(client, db_session)  # a different account, logging in fresh
+    login_as(client, db_session)
     assert client.get(f"/contracts/{uploader_contract['id']}").status_code == 404
     listed = client.get("/contracts").json()
     assert not any(c["id"] == uploader_contract["id"] for c in listed)
@@ -181,13 +164,6 @@ def test_protected_endpoints_reject_no_session(client):
 
 
 def test_deadline_check_returns_a_schema_valid_alert_for_a_due_soon_deadline(client, db_session):
-    """Regression test: deadline_service.check_deadlines reports windows
-    as Deadline.status values ("notified_30", ...), but DeadlineAlert's
-    schema only accepts "30_day" etc. — passing the internal label
-    straight through used to 500 on any deadline actually due soon (see
-    app/api/deadlines.py::_WINDOW_LABELS). SAMPLE_TEXT's own deadlines
-    are dated 2027 (never trips the 90/30/7-day windows on their own),
-    so this pulls one into range directly."""
     contract = _upload(client, db_session)
     client.post(f"/contracts/{contract['id']}/analyze")
 

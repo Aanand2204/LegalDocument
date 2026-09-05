@@ -1,4 +1,4 @@
-"""Deadline endpoints (plan sections 20, 27)."""
+"""Deadline endpoints."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
@@ -11,12 +11,7 @@ from app.services.deadline_service import check_deadlines
 
 router = APIRouter(tags=["deadlines"])
 
-# deadline_service.check_deadlines reports windows as Deadline.status
-# values ("notified_90"/"notified_30"/"notified_7" — see _STATUS_ORDER
-# there, which doubles as a persisted lifecycle state); DeadlineAlert is
-# the external API shape and never had those internal labels, so they're
-# translated here at the API boundary rather than overloading the
-# service layer's status vocabulary.
+# Translates deadline_service's internal status labels to the API's shape.
 _WINDOW_LABELS = {"notified_90": "90_day", "notified_30": "30_day", "notified_7": "7_day"}
 
 
@@ -35,13 +30,6 @@ def run_deadline_check(
     db: Session = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Manual trigger for the 90/30/7-day deadline sweep (plan section 27),
-    scoped to the caller's own contracts.
-
-    A scheduled Azure Function would call this same logic automatically
-    — see services/deadline_service.py and the implementation plan's
-    "Explicitly deferred" list.
-    """
     owned_ids = {c.id for c in repo.list_contracts(db, uploaded_by=user.email)}
     results = check_deadlines(db, contract_ids=owned_ids)
     return [

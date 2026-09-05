@@ -1,4 +1,4 @@
-"""Contract upload, listing, retrieval, and analysis endpoints (plan section 20)."""
+"""Contract upload, listing, retrieval, and analysis endpoints."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
@@ -107,9 +107,6 @@ async def get_contract_compliance(
     db: Session = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Recomputed on demand from persisted clauses — read-only, no new
-    agent run written to governance_events, so it's safe to call every
-    time the contract detail view loads (see ComplianceResponse)."""
     contract = require_owned_contract(db, contract_id, user)
 
     clauses = repo.list_clauses(db, contract_id)

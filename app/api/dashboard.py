@@ -1,4 +1,4 @@
-"""Dashboard statistics and audit-trail read endpoints (plan sections 20-21, 31)."""
+"""Dashboard statistics and audit-trail read endpoints."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

@@ -1,11 +1,4 @@
-"""Notification stub (plan section 28).
-
-Logs what would be sent instead of actually delivering email/Teams — no
-external channel is wired up in this slice (see the implementation
-plan's "Explicitly deferred" list). Callers (services/deadline_service.py,
-workflows/contract_review.py) don't change when a real channel is added
-here.
-"""
+"""Notification stub — logs what would be sent instead of delivering it."""
 from __future__ import annotations
 
 import logging

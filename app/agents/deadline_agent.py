@@ -1,8 +1,4 @@
-"""Deadline Agent (plan section 9).
-
-Extracts effective/expiry/renewal dates and notice periods so they can be
-persisted and later monitored by services/deadline_service.py.
-"""
+"""Deadline Agent — extracts dates and notice periods for deadline_service."""
 from __future__ import annotations
 
 from app.agents.base import run_contract_agent

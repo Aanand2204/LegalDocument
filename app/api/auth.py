@@ -1,8 +1,4 @@
-"""Registration, login, logout, and "who am I".
-
-No roles: every account that can log in can use every endpoint (see
-app/api/deps.py) — registration just creates an account and signs it in.
-"""
+"""Registration, login, logout, and "who am I"."""
 from __future__ import annotations
 
 import logging
@@ -36,9 +32,7 @@ def _issue_session(db: Session, response: Response, user_id: int) -> None:
         httponly=True,
         samesite="lax",
         secure=settings.session_cookie_secure,
-        # No max_age/expires: a non-persistent "session cookie" that the
-        # browser clears when it closes — see config.py's session note.
-        path="/",
+        path="/",  # no max_age: non-persistent cookie, cleared on browser close
     )
 
 
@@ -57,9 +51,6 @@ def register(body: RegisterRequest, response: Response, db: Session = Depends(ge
 def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = repo.get_user_by_email(db, body.email)
     if user is None or not auth_service.verify_password(body.password, user.password_hash):
-        # Deliberately generic in the response — never reveal whether the
-        # email or the password was the part that didn't match. The log
-        # line is for operators, not the client, so it can say which.
         logger.warning(
             "login failed for %s: %s", body.email, "no such account" if user is None else "wrong password"
         )

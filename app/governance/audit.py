@@ -1,10 +1,5 @@
-"""Writes GovernanceEvent + AuditLog rows.
-
-Called by every agent stage in the workflow (workflows/contract_review.py)
-and by the review/decision API endpoints — this is the single place that
-touches the audit tables, so RULE-004 ("every AI decision must be
-logged") has one implementation to verify rather than one per caller.
-"""
+"""Writes GovernanceEvent + AuditLog rows — the single place that touches
+the audit tables, satisfying RULE-004."""
 from __future__ import annotations
 
 import hashlib

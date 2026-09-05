@@ -1,9 +1,4 @@
-"""Each agent run against the mock chat client — no network, no API key.
-
-Asserts the structured JSON shape each agent module promises, since
-workflows/contract_review.py and the mock client (llm/mock_client.py)
-both depend on that shape staying stable.
-"""
+"""Each agent run against the mock chat client — no network, no API key."""
 from __future__ import annotations
 
 import pytest
@@ -41,11 +36,6 @@ async def test_clause_agent_finds_expected_clause_types():
 
 
 async def test_clause_agent_returns_the_complete_numbered_paragraph():
-    """Regression test: clause extraction used to grab a fixed 240-char
-    window around the matched keyword, which routinely started and ended
-    mid-word. Real contracts are almost always organized into numbered
-    sections ("12. Insurance and Indemnification. ..."), which is a
-    reliable boundary to extract the *complete* clause instead."""
     text = (
         "11. Non-Solicitation. For a period of six months following any termination, "
         "the Contractor shall not, directly or indirectly hire, solicit, or encourage "
@@ -106,11 +96,6 @@ async def test_deadline_agent_computes_termination_notice_from_expiry_and_notice
 
 
 async def test_deadline_agent_survives_pdf_line_wrapping():
-    """Regression test: pypdf's extract_text() emits one \\n per rendered
-    PDF line, not per sentence — a real contract routinely wraps a
-    keyword and its date onto separate lines. This reproduces exactly
-    that shape; before the whitespace-normalization fix in
-    llm/mock_client.py, this returned zero deadlines."""
     text = (
         "This Agreement is made and entered into as of the 1st day of\n"
         "January, 2026 (the \"Effective Date\") by and between ABC Ltd and XYZ\n"

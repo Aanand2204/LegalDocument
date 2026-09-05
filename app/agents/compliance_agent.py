@@ -1,9 +1,4 @@
-"""Compliance Agent (plan section 10).
-
-Checks the contract's already-extracted clauses against an
-organizational policy checklist (see governance/policies.py) and reports
-pass/fail per requirement plus an overall compliance score.
-"""
+"""Compliance Agent — checks extracted clauses against a policy checklist."""
 from __future__ import annotations
 
 from app.agents.base import build_agent, run_agent_json

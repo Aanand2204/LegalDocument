@@ -1,10 +1,4 @@
-"""Aggregates governance/rules.py into one decision per analysis run.
-
-This is the "deterministic governance policy" layer the plan insists on
-(section 26): agent output is never trusted directly into a decision —
-every run passes through here first, and only this module's output can
-set `requires_human_review`.
-"""
+"""Aggregates governance/rules.py into one decision per analysis run."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -46,9 +40,7 @@ def evaluate(
     model_name: str | None = None,
     model_version: str | None = None,
 ) -> GovernanceDecision:
-    # RULE-006/008 need real inputs to mean anything; a caller that
-    # doesn't supply them (e.g. a unit test focused on RULE-001..005)
-    # gets a trivial pass rather than a false failure.
+    # A caller that doesn't supply hash/model info gets a trivial pass.
     document_unmutated = (
         rule_006_no_document_mutation(original_document_hash, current_document_hash)
         if original_document_hash is not None and current_document_hash is not None
@@ -71,10 +63,7 @@ def evaluate(
         model_version_present,
     )
 
-    # RULE-001/003/004/006/008 are hard blocks — the run itself is
-    # invalid or its integrity is compromised, not merely "needs a
-    # lawyer's eyes". RULE-002/005/007 are "route to human review"
-    # signals: risky content, not a broken run.
+    # 001/003/004/006/008 are hard blocks; 002/005/007 route to review.
     blocked = (
         not results[0].passed
         or not results[2].passed

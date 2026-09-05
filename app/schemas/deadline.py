@@ -18,8 +18,6 @@ class DeadlineOut(BaseModel):
 
 
 class DeadlineAlert(BaseModel):
-    """One entry in a deadline-check run (plan section 27/28)."""
-
     contract_id: int
     contract_number: str
     deadline_id: int

@@ -1,12 +1,5 @@
-"""Application-wide logging setup.
-
-Separate from (not a replacement for) the permanent, DB-backed
-compliance trail in `app/governance/audit.py` (GovernanceEvent /
-AuditLog) — this is a real-time, human-readable operational trace of
-what the app is doing, for monitoring/debugging, not for governance
-evidence. Configured once, at process startup (see main.py); every
-module logs via the standard `logging.getLogger(__name__)` pattern.
-"""
+"""Console + rotating-file logging, separate from the DB-backed audit trail
+in app/governance/audit.py."""
 from __future__ import annotations
 
 import logging
@@ -25,9 +18,7 @@ _configured = False
 def configure_logging() -> None:
     global _configured
     if _configured:
-        return  # guards our own re-entry; other libraries (pytest's log
-        # capture, uvicorn's own loggers) may already hold root handlers
-        # of their own, so presence-checking `root.handlers` isn't safe.
+        return
     _configured = True
 
     settings = get_settings()
@@ -47,10 +38,6 @@ def configure_logging() -> None:
     file_handler.setFormatter(formatter)
     root.addHandler(file_handler)
 
-    # `uvicorn --reload`'s file watcher logs "N changes detected" for
-    # every raw filesystem event in the project tree *before* deciding
-    # whether to actually reload — including our own logs/app.log
-    # growing on every request, which would otherwise re-log itself
-    # forever. Pure dev-tooling chatter, irrelevant to monitoring the
-    # app itself, so it's turned down rather than routed to our handlers.
+    # Quiet uvicorn's reload-watcher chatter (it logs every fs event,
+    # including our own log file growing).
     logging.getLogger("watchfiles").setLevel(logging.WARNING)

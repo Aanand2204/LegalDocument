@@ -1,12 +1,5 @@
-"""Lawyer review endpoints (plan sections 12, 20, 24).
-
-This is the ONLY place `Contract.status` can become "approved" or
-"rejected", and the only place a `Risk.human_decision` is set — matching
-the plan's core principle, AI recommends and a human decides (RULE-001).
-No agent or workflow code writes these fields. Any logged-in account can
-call these (no roles — see app/api/deps.py); the point is AI-vs-human,
-not which human.
-"""
+"""Lawyer review endpoints — the only place a contract's status becomes
+approved/rejected or a risk's human_decision is set (RULE-001)."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
@@ -75,7 +68,6 @@ def approve_risk(
     db: Session = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Lawyer confirms the AI's risk finding stands (human_decision=CONFIRMED)."""
     return _decide_risk(db, risk_id, decision="CONFIRMED", body=body, user=user)
 
 
@@ -86,6 +78,4 @@ def reject_risk(
     db: Session = Depends(get_db),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Lawyer overrides the AI's risk finding as not applicable (plan
-    section 24's override example; human_decision=OVERRIDDEN)."""
     return _decide_risk(db, risk_id, decision="OVERRIDDEN", body=body, user=user)
